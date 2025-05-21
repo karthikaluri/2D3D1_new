@@ -1,64 +1,91 @@
 import pygame
-import sys
+import time
 
-# Initialize Pygame
 pygame.init()
+pygame.mixer.init()
 
-# Screen settings
-WIDTH, HEIGHT = 800, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Movement with Speed Boost")
-
-# Colors
-WHITE = (255, 255, 255)
-BLUE = (0, 0, 255)
-
-# Player settings
-player_size = 50
-player_pos = [WIDTH // 2, HEIGHT // 2]
-base_speed = 5
-boost_speed = 10
-
-# Clock for controlling frame rate
+# Screen setup
+screen = pygame.display.set_mode((600, 400))
+pygame.display.set_caption("Image and Sound Demo")
 clock = pygame.time.Clock()
 
-# Main game loop
+# Load assets
+player_img = pygame.image.load("finalpic-removebg-preview.png")
+player_img = pygame.transform.scale(player_img, (50, 50))
+
+# Load sounds
+pygame.mixer.music.load("background_music.mp3")  # Background music
+pygame.mixer.music.play(-1)  # Loop forever
+jump_sound = pygame.mixer.Sound("jump.wav")  # Jump sound effect
+
+# Load the tile image
+tile_img = pygame.image.load("tile.png")  # Replace with your tile image path
+tile_width, tile_height = tile_img.get_width(), tile_img.get_height()
+
+# Player variables
+player_x, player_y = 100, 300
+speed = 5
+gravity = 0.5
+velocity_y = 0
+is_jumping = False
+ground_y = 300  # The y position that represents the ground
+
+# Trial settings: 1000 seconds trial period
+trial_start_time = time.time()
+trial_duration = 1000  # seconds
+
 running = True
 while running:
-    clock.tick(60)  # 60 FPS
-    screen.fill(WHITE)
+    # Draw the tiled background
+    for y in range(0, 400, tile_height):
+        for x in range(0, 600, tile_width):
+            screen.blit(tile_img, (x, y))
 
-    # Event handling (must come before key press handling)
+    # Check if trial time has ended
+    if time.time() - trial_start_time > trial_duration:
+        font = pygame.font.SysFont(None, 55)
+        text = font.render("Trial Time Expired", True, (255, 0, 0))
+        screen.blit(text, (150, 150))
+        pygame.display.update()
+        time.sleep(2)
+        running = False
+        continue
+
+    # Key input
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT]:
+        player_x -= speed
+    if keys[pygame.K_RIGHT]:
+        player_x += speed
+    if keys[pygame.K_UP]:
+        player_y -= speed  # Optional for flying/ladders
+    if keys[pygame.K_DOWN]:
+        player_y += speed  # Optional
+
+    if keys[pygame.K_SPACE]:
+        if not is_jumping:  # Only jump if not already jumping
+            velocity_y = -10  # Jump strength
+            is_jumping = True
+            jump_sound.play()
+
+    # Gravity and jump logic
+    if is_jumping:
+        player_y += velocity_y
+        velocity_y += gravity
+        if player_y >= ground_y:
+            player_y = ground_y
+            is_jumping = False
+            velocity_y = 0
+
+    # Draw player
+    screen.blit(player_img, (player_x, player_y))
+
+    # Handle quit
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    # Input handling
-    keys = pygame.key.get_pressed()
+    pygame.display.update()
+    clock.tick(60)
 
-    # Determine speed (shift for speed boost)
-    speed = boost_speed if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT] else base_speed
-
-    # Movement controls (WASD and Arrow Keys)
-    if keys[pygame.K_w] or keys[pygame.K_UP]:
-        player_pos[1] -= speed
-    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-        player_pos[1] += speed
-    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-        player_pos[0] -= speed
-    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-        player_pos[0] += speed
-
-    # Boundary locking
-    player_pos[0] = max(0, min(WIDTH - player_size, player_pos[0]))
-    player_pos[1] = max(0, min(HEIGHT - player_size, player_pos[1]))
-
-    # Draw player
-    pygame.draw.rect(screen, BLUE, (*player_pos, player_size, player_size))
-
-    # Update display
-    pygame.display.flip()
-
-# Quit Pygame
 pygame.quit()
-sys.exit()
